@@ -1,0 +1,76 @@
+Custom mail delivery method in Rails 3.*
+----------------------------------------
+Rails 3 allows you to specify a custom mail delivery method in addition to the default options smtp, sendmail, test and file. You can do this by specifying the class name of your mail delivery handler in the config file like this:
+
+config.action_mailer.delivery_method = MyCustomDelivery
+
+And the interface your class needs to implement is:
+
+class CustomDelivery
+  def deliver!(mail)
+  end
+end
+
+How does this work?
+-------------------
+Say you have a mailer class for sending out a welcome email:
+
+class Notifier < ActionMailer::Base
+  def welcome
+    mail(:to => "receiver@test.com",
+         :from => "sender@test.com",
+         :subject => "Testing custom mail delivery methods",
+         :body => "Hello World")
+  end
+end
+
+When you try to deliver a welcome email, the Mail object constructed in the "welcome" method is sent to the deliver! method of your delivery class.
+
+mail = Notifier.welcome # Construct a mail object
+mail.deliver            # Deliver the mail with the delivery method specified in the config
+
+In your deliver! method you will then have full access to the mail object:
+
+class CustomDelivery
+  def deliver!(mail)
+    puts mail.to       # receiver@test.com
+    puts mail.from     # sender@test.com
+    .
+    .
+    .
+  end
+end
+  
+Why is this useful?
+-------------------
+Consider a rails application like Twitter where different notification emails go out when people start following each other, send direct messages to each other, etc. Testing these emails by writing mailer tests is good. But it will also be nice to view the actual email that will be delivered to the users. To accomplish this we can write a custom SMTP (catch all) delivery class which inherits from the default Mail::SMTP class.
+
+require 'rubygems'
+require 'mail'
+
+class CustomSmtpDelivery < ::Mail::SMTP
+  # SMTP configuration (could be possible to pass the settings from the config file)
+  def initialize(values)
+    self.settings = {:address => "smtp.gmail.com",
+                     :port => 587,
+                     :domain => 'yourdomain',
+                     :user_name => "username",
+                     :password => "password",
+                     :authentication => 'plain',
+                     :enable_starttls_auto => true,
+                     :openssl_verify_mode => nil
+                    }.merge!(values)
+  end
+  attr_accessor :settings
+
+  def deliver!(mail)
+    # Redirect all mail to your inbox
+    mail['to'] = "youremail@domain.com"
+    mail['bcc'] = []
+    mail['cc'] = []
+    super(mail)
+  end
+end
+
+In this class we first setup our SMTP configuration and in the deliver! method, we are basically redirect all outgoing email to our personal email by modifying the "to field" and then passing on the modified mail object to the default SMTP delivery class. 
+
