@@ -72,5 +72,12 @@ class CustomSmtpDelivery < ::Mail::SMTP
   end
 end
 
-In this class we first setup our SMTP configuration and in the deliver! method, we are basically redirect all outgoing email to our personal email by modifying the "to field" and then passing on the modified mail object to the default SMTP delivery class. 
+In this class we first setup our SMTP configuration and in the deliver! method, we are basically redirecting all outgoing email to our personal email by modifying the "to field" and then passing on the modified mail object super class delivery method.
 
+Usage
+-----
+1.) Update the SMTP configuration in lib/custom_smtp_delivery.rb to use your SMTP server
+2.) Update the "to" email address in the CustomSmtpDeliver#deliver! method
+3.) rails console
+    > Notifier.welcome.deliver 
+4.) Check your inbox.
